@@ -32,6 +32,7 @@ return array(
     'Symfony\\Component\\PropertyAccess\\' => array($vendorDir . '/symfony/property-access'),
     'Symfony\\Component\\OptionsResolver\\' => array($vendorDir . '/symfony/options-resolver'),
     'Symfony\\Component\\Mime\\' => array($vendorDir . '/symfony/mime'),
+    'Symfony\\Component\\Messenger\\' => array($vendorDir . '/symfony/messenger'),
     'Symfony\\Component\\Inflector\\' => array($vendorDir . '/symfony/inflector'),
     'Symfony\\Component\\HttpKernel\\' => array($vendorDir . '/symfony/http-kernel'),
     'Symfony\\Component\\HttpFoundation\\' => array($vendorDir . '/symfony/http-foundation'),
