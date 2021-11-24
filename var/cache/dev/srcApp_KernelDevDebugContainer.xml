@@ -251,6 +251,12 @@
           <parameter>console</parameter>
         </parameter>
       </parameter>
+      <parameter key="monolog.handler.messenger" type="collection">
+        <parameter key="type">inclusive</parameter>
+        <parameter key="elements" type="collection">
+          <parameter>messenger_audit</parameter>
+        </parameter>
+      </parameter>
       <parameter key="monolog.handler.main" type="collection">
         <parameter key="type">exclusive</parameter>
         <parameter key="elements" type="collection">
@@ -346,16 +352,42 @@
       <tag name="controller.service_arguments"/>
       <tag name="container.service_subscriber"/>
       <call method="setContainer">
-        <argument type="service" id=".service_locator.m_SIxVu.App\Controller\ImagePostController"/>
+        <argument type="service" id=".service_locator.7GD13BW.App\Controller\ImagePostController"/>
       </call>
     </service>
     <service id="App\Controller\MainController" class="App\Controller\MainController" public="true" autowire="true" autoconfigure="true">
       <tag name="controller.service_arguments"/>
       <tag name="container.service_subscriber"/>
       <call method="setContainer">
-        <argument type="service" id=".service_locator.m_SIxVu.App\Controller\MainController"/>
+        <argument type="service" id=".service_locator.7GD13BW.App\Controller\MainController"/>
       </call>
     </service>
+    <service id="App\Message\AddPonkaToImage" class="App\Message\AddPonkaToImage" autowire="true" autoconfigure="true"/>
+    <service id="App\Message\DeleteImagePost" class="App\Message\DeleteImagePost" autowire="true" autoconfigure="true"/>
+    <service id="App\Message\DeletePhotoFile" class="App\Message\DeletePhotoFile" autowire="true" autoconfigure="true"/>
+    <service id="App\MessageHandler\AddPonkaToImageHandler" class="App\MessageHandler\AddPonkaToImageHandler" autowire="true" autoconfigure="true">
+      <tag name="messenger.message_handler"/>
+      <argument type="service" id="App\Photo\PhotoPonkaficator"/>
+      <argument type="service" id="App\Photo\PhotoFileManager"/>
+      <argument type="service" id="doctrine.orm.default_entity_manager"/>
+      <argument type="service" id="App\Repository\ImagePostRepository"/>
+      <call method="setLogger">
+        <argument type="service" id="monolog.logger"/>
+      </call>
+    </service>
+    <service id="App\MessageHandler\DeleteImagePostHandler" class="App\MessageHandler\DeleteImagePostHandler" autowire="true" autoconfigure="true">
+      <tag name="messenger.message_handler"/>
+      <argument type="service" id="doctrine.orm.default_entity_manager"/>
+      <argument type="service" id="debug.traced.messenger.bus.default"/>
+    </service>
+    <service id="App\MessageHandler\DeletePhotoFIleHandler" class="App\MessageHandler\DeletePhotoFIleHandler" autowire="true" autoconfigure="true">
+      <tag name="messenger.message_handler"/>
+      <argument type="service" id="App\Photo\PhotoFileManager"/>
+    </service>
+    <service id="App\Messenger\AuditMiddleware" class="App\Messenger\AuditMiddleware" autowire="true" autoconfigure="true">
+      <argument type="service" id="monolog.logger.messenger_audit"/>
+    </service>
+    <service id="App\Messenger\UniqueIdStamp" class="App\Messenger\UniqueIdStamp" autowire="true" autoconfigure="true"/>
     <service id="App\Photo\PhotoFileManager" class="App\Photo\PhotoFileManager" autowire="true" autoconfigure="true">
       <argument type="service" id="photo.filesystem"/>
       <argument>/uploads/images</argument>
@@ -464,6 +496,7 @@
         <argument key="debug.validator" type="service" id="debug.validator" on-invalid="ignore_uninitialized"/>
         <argument key="debug.stopwatch" type="service" id="debug.stopwatch" on-invalid="ignore_uninitialized"/>
         <argument key="monolog.handler.main" type="service" id="monolog.handler.main" on-invalid="ignore_uninitialized"/>
+        <argument key="monolog.handler.messenger" type="service" id="monolog.handler.messenger" on-invalid="ignore_uninitialized"/>
         <argument key="monolog.handler.console" type="service" id="monolog.handler.console" on-invalid="ignore_uninitialized"/>
         <argument key="webpack_encore.tag_renderer" type="service" id="webpack_encore.tag_renderer" on-invalid="ignore_uninitialized"/>
         <argument key="webpack_encore.entrypoint_lookup[_default]" type="service" id="webpack_encore.entrypoint_lookup[_default]" on-invalid="ignore_uninitialized"/>
@@ -474,6 +507,7 @@
         <argument key="debug.validator">reset</argument>
         <argument key="debug.stopwatch">reset</argument>
         <argument key="monolog.handler.main">reset</argument>
+        <argument key="monolog.handler.messenger">reset</argument>
         <argument key="monolog.handler.console">reset</argument>
         <argument key="webpack_encore.tag_renderer">reset</argument>
         <argument key="webpack_encore.entrypoint_lookup[_default]">reset</argument>
@@ -610,7 +644,11 @@
       <argument type="service" id="messenger.routable_message_bus"/>
       <argument type="service" id="messenger.receiver_locator"/>
       <argument type="service" id="monolog.logger.messenger" on-invalid="null"/>
-      <argument type="collection"/>
+      <argument type="collection">
+        <argument>async</argument>
+        <argument>async_priority_high</argument>
+        <argument>failed</argument>
+      </argument>
       <argument type="service" id="messenger.retry_strategy_locator"/>
       <argument type="service" id="debug.event_dispatcher"/>
       <call method="setCachePoolForRestartSignal">
@@ -628,7 +666,11 @@
     <service id="console.command.messenger_setup_transports" class="Symfony\Component\Messenger\Command\SetupTransportsCommand" public="false">
       <tag name="console.command" command="messenger:setup-transports"/>
       <argument type="service" id="messenger.receiver_locator"/>
-      <argument type="collection"/>
+      <argument type="collection">
+        <argument>async</argument>
+        <argument>async_priority_high</argument>
+        <argument>failed</argument>
+      </argument>
       <call method="setName">
         <argument>messenger:setup-transports</argument>
       </call>
@@ -636,7 +678,26 @@
     <service id="console.command.messenger_debug" class="Symfony\Component\Messenger\Command\DebugCommand" public="false">
       <tag name="console.command" command="debug:messenger"/>
       <argument type="collection">
-        <argument key="messenger.bus.default" type="collection"/>
+        <argument key="messenger.bus.default" type="collection">
+          <argument key="App\Message\AddPonkaToImage" type="collection">
+            <argument type="collection">
+              <argument>App\MessageHandler\AddPonkaToImageHandler</argument>
+              <argument type="collection"/>
+            </argument>
+          </argument>
+          <argument key="App\Message\DeleteImagePost" type="collection">
+            <argument type="collection">
+              <argument>App\MessageHandler\DeleteImagePostHandler</argument>
+              <argument type="collection"/>
+            </argument>
+          </argument>
+          <argument key="App\Message\DeletePhotoFile" type="collection">
+            <argument type="collection">
+              <argument>App\MessageHandler\DeletePhotoFIleHandler</argument>
+              <argument type="collection"/>
+            </argument>
+          </argument>
+        </argument>
       </argument>
       <call method="setName">
         <argument>debug:messenger</argument>
@@ -647,6 +708,34 @@
       <argument type="service" id="cache.messenger.restart_workers_signal"/>
       <call method="setName">
         <argument>messenger:stop-workers</argument>
+      </call>
+    </service>
+    <service id="console.command.messenger_failed_messages_retry" class="Symfony\Component\Messenger\Command\FailedMessagesRetryCommand" public="false">
+      <tag name="console.command" command="messenger:failed:retry"/>
+      <argument>failed</argument>
+      <argument type="service" id="messenger.transport.failed"/>
+      <argument type="service" id="messenger.routable_message_bus"/>
+      <argument type="service" id="debug.event_dispatcher"/>
+      <argument type="service" id="messenger.retry.multiplier_retry_strategy.failed"/>
+      <argument type="service" id="monolog.logger"/>
+      <call method="setName">
+        <argument>messenger:failed:retry</argument>
+      </call>
+    </service>
+    <service id="console.command.messenger_failed_messages_show" class="Symfony\Component\Messenger\Command\FailedMessagesShowCommand" public="false">
+      <tag name="console.command" command="messenger:failed:show"/>
+      <argument>failed</argument>
+      <argument type="service" id="messenger.transport.failed"/>
+      <call method="setName">
+        <argument>messenger:failed:show</argument>
+      </call>
+    </service>
+    <service id="console.command.messenger_failed_messages_remove" class="Symfony\Component\Messenger\Command\FailedMessagesRemoveCommand" public="false">
+      <tag name="console.command" command="messenger:failed:remove"/>
+      <argument>failed</argument>
+      <argument type="service" id="messenger.transport.failed"/>
+      <call method="setName">
+        <argument>messenger:failed:remove</argument>
       </call>
     </service>
     <service id="console.command.router_debug" class="Symfony\Bundle\FrameworkBundle\Command\RouterDebugCommand" public="false">
@@ -909,8 +998,15 @@
       <argument type="service" id="assets.context"/>
     </service>
     <service id="messenger.senders_locator" class="Symfony\Component\Messenger\Transport\Sender\SendersLocator" public="false">
-      <argument type="collection"/>
-      <argument type="service" id=".service_locator.9_yeNH1"/>
+      <argument type="collection">
+        <argument key="App\Message\AddPonkaToImage" type="collection">
+          <argument>async_priority_high</argument>
+        </argument>
+        <argument key="App\Message\DeletePhotoFile" type="collection">
+          <argument>async</argument>
+        </argument>
+      </argument>
+      <argument type="service" id=".service_locator.JEJPOSL"/>
     </service>
     <service id="messenger.middleware.send_message" class="Symfony\Component\Messenger\Middleware\SendMessageMiddleware" public="false">
       <tag name="monolog.logger" channel="messenger"/>
@@ -918,6 +1014,11 @@
       <call method="setLogger">
         <argument type="service" id="monolog.logger.messenger" on-invalid="ignore"/>
       </call>
+    </service>
+    <service id="messenger.transport.symfony_serializer" class="Symfony\Component\Messenger\Transport\Serialization\Serializer" public="false">
+      <argument type="service" id="serializer"/>
+      <argument>json</argument>
+      <argument type="collection"/>
     </service>
     <service id="messenger.transport.native_php_serializer" class="Symfony\Component\Messenger\Transport\Serialization\PhpSerializer" public="false"/>
     <service id="messenger.middleware.handle_message" class="Symfony\Component\Messenger\Middleware\HandleMessageMiddleware" public="false" abstract="true">
@@ -938,10 +1039,23 @@
     </service>
     <service id="messenger.receiver_locator" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
-      <argument type="collection"/>
+      <argument type="collection">
+        <argument key="async" type="service" id="messenger.transport.async"/>
+        <argument key="async_priority_high" type="service" id="messenger.transport.async_priority_high"/>
+        <argument key="failed" type="service" id="messenger.transport.failed"/>
+        <argument key="messenger.transport.async" type="service" id="messenger.transport.async"/>
+        <argument key="messenger.transport.async_priority_high" type="service" id="messenger.transport.async_priority_high"/>
+        <argument key="messenger.transport.failed" type="service" id="messenger.transport.failed"/>
+      </argument>
     </service>
     <service id="messenger.transport_factory" class="Symfony\Component\Messenger\Transport\TransportFactory" public="false">
       <argument type="tagged" tag="messenger.transport_factory"/>
+    </service>
+    <service id="messenger.transport.amqp.factory" class="Symfony\Component\Messenger\Transport\AmqpExt\AmqpTransportFactory" public="false">
+      <tag name="messenger.transport_factory"/>
+    </service>
+    <service id="messenger.transport.redis.factory" class="Symfony\Component\Messenger\Transport\RedisExt\RedisTransportFactory" public="false">
+      <tag name="messenger.transport_factory"/>
     </service>
     <service id="messenger.transport.sync.factory" class="Symfony\Component\Messenger\Transport\Sync\SyncTransportFactory" public="false">
       <tag name="messenger.transport_factory"/>
@@ -953,7 +1067,11 @@
     </service>
     <service id="messenger.retry_strategy_locator" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
-      <argument type="collection"/>
+      <argument type="collection">
+        <argument key="async" type="service" id="messenger.retry.multiplier_retry_strategy.async"/>
+        <argument key="async_priority_high" type="service" id="messenger.retry.multiplier_retry_strategy.async_priority_high"/>
+        <argument key="failed" type="service" id="messenger.retry.multiplier_retry_strategy.failed"/>
+      </argument>
     </service>
     <service id="messenger.retry.abstract_multiplier_retry_strategy" class="Symfony\Component\Messenger\Retry\MultiplierRetryStrategy" public="false" abstract="true">
       <argument></argument>
@@ -961,13 +1079,65 @@
       <argument></argument>
       <argument></argument>
     </service>
+    <service id="messenger.failure.send_failed_message_to_failure_transport_listener" class="Symfony\Component\Messenger\EventListener\SendFailedMessageToFailureTransportListener" public="false">
+      <tag name="kernel.event_subscriber"/>
+      <tag name="monolog.logger" channel="messenger"/>
+      <argument type="service" id="messenger.routable_message_bus"/>
+      <argument>failed</argument>
+      <argument type="service" id="monolog.logger.messenger" on-invalid="ignore"/>
+    </service>
     <service id="messenger.routable_message_bus" class="Symfony\Component\Messenger\RoutableMessageBus" public="false">
       <argument type="service" id=".service_locator.CZEXAXI"/>
       <argument type="service" id="debug.traced.messenger.bus.default"/>
     </service>
-    <service id=".service_locator.9_yeNH1" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
-      <tag name="container.service_locator"/>
+    <service id="messenger.transport.async" class="Symfony\Component\Messenger\Transport\TransportInterface">
+      <tag name="messenger.receiver" alias="async"/>
+      <argument>sync://</argument>
       <argument type="collection"/>
+      <argument type="service" id="messenger.transport.native_php_serializer"/>
+      <factory service="messenger.transport_factory" method="createTransport"/>
+    </service>
+    <service id="messenger.retry.multiplier_retry_strategy.async" class="Symfony\Component\Messenger\Retry\MultiplierRetryStrategy" public="false">
+      <argument>3</argument>
+      <argument>500</argument>
+      <argument>2</argument>
+      <argument>0</argument>
+    </service>
+    <service id="messenger.transport.async_priority_high" class="Symfony\Component\Messenger\Transport\TransportInterface">
+      <tag name="messenger.receiver" alias="async_priority_high"/>
+      <argument>sync://</argument>
+      <argument type="collection">
+        <argument key="queue_name">high</argument>
+      </argument>
+      <argument type="service" id="messenger.transport.native_php_serializer"/>
+      <factory service="messenger.transport_factory" method="createTransport"/>
+    </service>
+    <service id="messenger.retry.multiplier_retry_strategy.async_priority_high" class="Symfony\Component\Messenger\Retry\MultiplierRetryStrategy" public="false">
+      <argument>3</argument>
+      <argument>1000</argument>
+      <argument>2</argument>
+      <argument>0</argument>
+    </service>
+    <service id="messenger.transport.failed" class="Symfony\Component\Messenger\Transport\TransportInterface">
+      <tag name="messenger.receiver" alias="failed"/>
+      <argument>doctrine://default?queue_name=failed</argument>
+      <argument type="collection"/>
+      <argument type="service" id="messenger.transport.native_php_serializer"/>
+      <factory service="messenger.transport_factory" method="createTransport"/>
+    </service>
+    <service id="messenger.retry.multiplier_retry_strategy.failed" class="Symfony\Component\Messenger\Retry\MultiplierRetryStrategy" public="false">
+      <argument>3</argument>
+      <argument>1000</argument>
+      <argument>2</argument>
+      <argument>0</argument>
+    </service>
+    <service id=".service_locator.JEJPOSL" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+      <tag name="container.service_locator"/>
+      <argument type="collection">
+        <argument key="async" type="service" id="messenger.transport.async"/>
+        <argument key="async_priority_high" type="service" id="messenger.transport.async_priority_high"/>
+        <argument key="failed" type="service" id="messenger.transport.failed"/>
+      </argument>
     </service>
     <service id=".1_PhpArrayAdapter~Am0IZk6" class="Symfony\Component\Cache\Adapter\PhpArrayAdapter" public="false">
       <argument>/var/www/html/messanger/var/cache/dev/validation.php</argument>
@@ -1348,6 +1518,14 @@
         <argument>0</argument>
       </call>
       <call method="addListener">
+        <argument>Symfony\Component\Messenger\Event\WorkerMessageFailedEvent</argument>
+        <argument type="collection">
+          <argument type="service" id="messenger.failure.send_failed_message_to_failure_transport_listener"/>
+          <argument>onMessageFailed</argument>
+        </argument>
+        <argument>-100</argument>
+      </call>
+      <call method="addListener">
         <argument>kernel.response</argument>
         <argument type="collection">
           <argument type="service" id="profiler_listener"/>
@@ -1631,7 +1809,7 @@
     <service id="router.default" class="Symfony\Bundle\FrameworkBundle\Routing\Router" public="false">
       <tag name="monolog.logger" channel="router"/>
       <tag name="container.service_subscriber" id="routing.loader"/>
-      <argument type="service" id=".service_locator.Yvv.Xdy.router.default"/>
+      <argument type="service" id=".service_locator.FsQWNAx.router.default"/>
       <argument>kernel::loadRoutes</argument>
       <argument type="collection">
         <argument key="cache_dir">/var/www/html/messanger/var/cache/dev</argument>
@@ -2805,6 +2983,17 @@
         <argument type="service" id="monolog.processor.psr_log_message"/>
       </call>
     </service>
+    <service id="monolog.handler.messenger" class="Monolog\Handler\StreamHandler">
+      <tag name="kernel.reset" method="reset"/>
+      <argument>/var/www/html/messanger/var/log/messenger.log</argument>
+      <argument>100</argument>
+      <argument>true</argument>
+      <argument>null</argument>
+      <argument>false</argument>
+      <call method="pushProcessor">
+        <argument type="service" id="monolog.processor.psr_log_message"/>
+      </call>
+    </service>
     <service id="monolog.handler.console" class="Symfony\Bridge\Monolog\Handler\ConsoleHandler">
       <tag name="kernel.event_subscriber"/>
       <tag name="kernel.reset" method="reset"/>
@@ -3007,6 +3196,13 @@
     <service id=".instanceof.Symfony\Contracts\Service\ServiceSubscriberInterface.0.App\Controller\MainController" class="App\Controller\MainController" autowire="true" abstract="true"/>
     <service id=".instanceof.Symfony\Bundle\FrameworkBundle\Controller\AbstractController.0.App\Controller\MainController" class="App\Controller\MainController" autowire="true" abstract="true"/>
     <service id=".abstract.instanceof.App\Controller\MainController" class="App\Controller\MainController" autowire="true" autoconfigure="true" abstract="true"/>
+    <service id=".instanceof.Symfony\Component\Messenger\Handler\MessageHandlerInterface.0.App\MessageHandler\AddPonkaToImageHandler" class="App\MessageHandler\AddPonkaToImageHandler" autowire="true" abstract="true"/>
+    <service id=".instanceof.Psr\Log\LoggerAwareInterface.0.App\MessageHandler\AddPonkaToImageHandler" class="App\MessageHandler\AddPonkaToImageHandler" autowire="true" abstract="true"/>
+    <service id=".abstract.instanceof.App\MessageHandler\AddPonkaToImageHandler" class="App\MessageHandler\AddPonkaToImageHandler" autowire="true" autoconfigure="true" abstract="true"/>
+    <service id=".instanceof.Symfony\Component\Messenger\Handler\MessageHandlerInterface.0.App\MessageHandler\DeleteImagePostHandler" class="App\MessageHandler\DeleteImagePostHandler" autowire="true" abstract="true"/>
+    <service id=".abstract.instanceof.App\MessageHandler\DeleteImagePostHandler" class="App\MessageHandler\DeleteImagePostHandler" autowire="true" autoconfigure="true" abstract="true"/>
+    <service id=".instanceof.Symfony\Component\Messenger\Handler\MessageHandlerInterface.0.App\MessageHandler\DeletePhotoFIleHandler" class="App\MessageHandler\DeletePhotoFIleHandler" autowire="true" abstract="true"/>
+    <service id=".abstract.instanceof.App\MessageHandler\DeletePhotoFIleHandler" class="App\MessageHandler\DeletePhotoFIleHandler" autowire="true" autoconfigure="true" abstract="true"/>
     <service id=".instanceof.Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepositoryInterface.0.App\Repository\ImagePostRepository" class="App\Repository\ImagePostRepository" autowire="true" abstract="true"/>
     <service id=".abstract.instanceof.App\Repository\ImagePostRepository" class="App\Repository\ImagePostRepository" autowire="true" autoconfigure="true" abstract="true"/>
     <service id=".instanceof.Symfony\Component\Serializer\Normalizer\NormalizerInterface.0.App\Serializer\Normalizer\ImagePostNormalizer" class="App\Serializer\Normalizer\ImagePostNormalizer" autowire="true" abstract="true"/>
@@ -3179,21 +3375,20 @@
         <argument key="repository" type="service" id="App\Repository\ImagePostRepository"/>
       </argument>
     </service>
-    <service id=".service_locator.BECuMFQ" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.3verMdE" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
         <argument key="entityManager" type="service" id="doctrine.orm.default_entity_manager"/>
+        <argument key="messageBus" type="service" id="debug.traced.messenger.bus.default"/>
         <argument key="photoManager" type="service" id="App\Photo\PhotoFileManager"/>
-        <argument key="ponkaficator" type="service" id="App\Photo\PhotoPonkaficator"/>
         <argument key="validator" type="service" id="debug.validator"/>
       </argument>
     </service>
-    <service id=".service_locator.JJpJxwc" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.10xTIct" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
-        <argument key="entityManager" type="service" id="doctrine.orm.default_entity_manager"/>
-        <argument key="imagePost" type="service" id=".errored..service_locator.JJpJxwc.App\Entity\ImagePost"/>
-        <argument key="photoManager" type="service" id="App\Photo\PhotoFileManager"/>
+        <argument key="imagePost" type="service" id=".errored..service_locator.10xTIct.App\Entity\ImagePost"/>
+        <argument key="messageBus" type="service" id="debug.traced.messenger.bus.default"/>
       </argument>
     </service>
     <service id=".service_locator.bYI0OVI" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
@@ -3202,15 +3397,15 @@
         <argument key="imagePost" type="service" id=".errored..service_locator.bYI0OVI.App\Entity\ImagePost"/>
       </argument>
     </service>
-    <service id=".service_locator.d_uLFcX" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.oXryCJz" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
-        <argument key="App\Controller\ImagePostController::create" type="service" id=".service_locator.BECuMFQ"/>
-        <argument key="App\Controller\ImagePostController::delete" type="service" id=".service_locator.JJpJxwc"/>
+        <argument key="App\Controller\ImagePostController::create" type="service" id=".service_locator.3verMdE"/>
+        <argument key="App\Controller\ImagePostController::delete" type="service" id=".service_locator.10xTIct"/>
         <argument key="App\Controller\ImagePostController::getItem" type="service" id=".service_locator.bYI0OVI"/>
         <argument key="App\Controller\ImagePostController::list" type="service" id=".service_locator.ACoqUn1"/>
-        <argument key="App\Controller\ImagePostController:create" type="service" id=".service_locator.BECuMFQ"/>
-        <argument key="App\Controller\ImagePostController:delete" type="service" id=".service_locator.JJpJxwc"/>
+        <argument key="App\Controller\ImagePostController:create" type="service" id=".service_locator.3verMdE"/>
+        <argument key="App\Controller\ImagePostController:delete" type="service" id=".service_locator.10xTIct"/>
         <argument key="App\Controller\ImagePostController:getItem" type="service" id=".service_locator.bYI0OVI"/>
         <argument key="App\Controller\ImagePostController:list" type="service" id=".service_locator.ACoqUn1"/>
       </argument>
@@ -3290,8 +3485,30 @@
         <argument key="messenger.bus.default" type="service" id="debug.traced.messenger.bus.default"/>
       </argument>
     </service>
-    <service id="messenger.bus.default.messenger.handlers_locator" class="Symfony\Component\Messenger\Handler\HandlersLocator">
+    <service id=".messenger.handler_descriptor.PDdrsmA" class="Symfony\Component\Messenger\Handler\HandlerDescriptor">
+      <argument type="service" id="App\MessageHandler\AddPonkaToImageHandler"/>
       <argument type="collection"/>
+    </service>
+    <service id=".messenger.handler_descriptor.KV7J8Zf" class="Symfony\Component\Messenger\Handler\HandlerDescriptor">
+      <argument type="service" id="App\MessageHandler\DeleteImagePostHandler"/>
+      <argument type="collection"/>
+    </service>
+    <service id=".messenger.handler_descriptor.v9ouAGu" class="Symfony\Component\Messenger\Handler\HandlerDescriptor">
+      <argument type="service" id="App\MessageHandler\DeletePhotoFIleHandler"/>
+      <argument type="collection"/>
+    </service>
+    <service id="messenger.bus.default.messenger.handlers_locator" class="Symfony\Component\Messenger\Handler\HandlersLocator">
+      <argument type="collection">
+        <argument key="App\Message\AddPonkaToImage" type="iterator">
+          <argument type="service" id=".messenger.handler_descriptor.PDdrsmA"/>
+        </argument>
+        <argument key="App\Message\DeleteImagePost" type="iterator">
+          <argument type="service" id=".messenger.handler_descriptor.KV7J8Zf"/>
+        </argument>
+        <argument key="App\Message\DeletePhotoFile" type="iterator">
+          <argument type="service" id=".messenger.handler_descriptor.v9ouAGu"/>
+        </argument>
+      </argument>
     </service>
     <service id=".service_locator.Otd28_S" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
@@ -3426,6 +3643,22 @@
       </call>
       <configurator class="Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\AddDebugLogProcessorPass" method="configureLogger"/>
     </service>
+    <service id="monolog.logger.messenger_audit" class="Symfony\Bridge\Monolog\Logger" public="true">
+      <argument>messenger_audit</argument>
+      <call method="pushProcessor">
+        <argument type="service" id="debug.log_processor"/>
+      </call>
+      <call method="pushHandler">
+        <argument type="service" id="monolog.handler.console"/>
+      </call>
+      <call method="pushHandler">
+        <argument type="service" id="monolog.handler.messenger"/>
+      </call>
+      <call method="pushHandler">
+        <argument type="service" id="monolog.handler.main"/>
+      </call>
+      <configurator class="Symfony\Bundle\FrameworkBundle\DependencyInjection\Compiler\AddDebugLogProcessorPass" method="configureLogger"/>
+    </service>
     <service id="monolog.handler.null_internal" class="Monolog\Handler\NullHandler"/>
     <service id=".service_locator.UwRI0uT" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
@@ -3442,7 +3675,7 @@
         <argument key="session_storage" type="service" id="session.storage.native" on-invalid="ignore"/>
       </argument>
     </service>
-    <service id=".service_locator.m_SIxVu" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.7GD13BW" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
         <argument key="doctrine" type="service" id="doctrine" on-invalid="ignore"/>
@@ -3457,29 +3690,29 @@
         <argument key="twig" type="service" id="twig" on-invalid="ignore"/>
       </argument>
     </service>
-    <service id=".service_locator.m_SIxVu.App\Controller\ImagePostController" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.7GD13BW.App\Controller\ImagePostController" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator_context" id="App\Controller\ImagePostController"/>
       <argument>App\Controller\ImagePostController</argument>
       <argument type="service" id="service_container"/>
-      <factory service=".service_locator.m_SIxVu" method="withContext"/>
+      <factory service=".service_locator.7GD13BW" method="withContext"/>
     </service>
-    <service id=".service_locator.m_SIxVu.App\Controller\MainController" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.7GD13BW.App\Controller\MainController" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator_context" id="App\Controller\MainController"/>
       <argument>App\Controller\MainController</argument>
       <argument type="service" id="service_container"/>
-      <factory service=".service_locator.m_SIxVu" method="withContext"/>
+      <factory service=".service_locator.7GD13BW" method="withContext"/>
     </service>
-    <service id=".service_locator.Yvv.Xdy" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.FsQWNAx" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
         <argument key="routing.loader" type="service" id="routing.loader"/>
       </argument>
     </service>
-    <service id=".service_locator.Yvv.Xdy.router.default" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.FsQWNAx.router.default" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator_context" id="router.default"/>
       <argument>router.default</argument>
       <argument type="service" id="service_container"/>
-      <factory service=".service_locator.Yvv.Xdy" method="withContext"/>
+      <factory service=".service_locator.FsQWNAx" method="withContext"/>
     </service>
     <service id=".service_locator.m8PwGkX" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
@@ -3536,12 +3769,12 @@
     <service id="debug.argument_resolver.request.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\RequestValueResolver" public="false"/>
     <service id="debug.argument_resolver.session.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\SessionValueResolver" public="false"/>
     <service id="debug.argument_resolver.service.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\ServiceValueResolver" public="false">
-      <argument type="service" id=".service_locator.d_uLFcX"/>
+      <argument type="service" id=".service_locator.oXryCJz"/>
     </service>
     <service id="debug.argument_resolver.default.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\DefaultValueResolver" public="false"/>
     <service id="debug.argument_resolver.variadic.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\VariadicValueResolver" public="false"/>
     <service id="debug.argument_resolver.not_tagged_controller.inner" class="Symfony\Component\HttpKernel\Controller\ArgumentResolver\NotTaggedControllerValueResolver" public="false">
-      <argument type="service" id=".service_locator.d_uLFcX"/>
+      <argument type="service" id=".service_locator.oXryCJz"/>
     </service>
     <service id="debug.traced.messenger.bus.default.inner" class="Symfony\Component\Messenger\MessageBus" public="false">
       <argument type="iterator">
@@ -3549,14 +3782,15 @@
         <argument type="service" id="messenger.bus.default.middleware.add_bus_name_stamp_middleware"/>
         <argument type="service" id="messenger.middleware.dispatch_after_current_bus"/>
         <argument type="service" id="messenger.middleware.failed_message_processing_middleware"/>
+        <argument type="service" id="App\Messenger\AuditMiddleware"/>
         <argument type="service" id="messenger.middleware.send_message"/>
         <argument type="service" id="messenger.bus.default.middleware.handle_message"/>
       </argument>
     </service>
-    <service id=".errored..service_locator.JJpJxwc.App\Entity\ImagePost" class="App\Entity\ImagePost"/>
+    <service id=".errored..service_locator.10xTIct.App\Entity\ImagePost" class="App\Entity\ImagePost"/>
     <service id=".errored..service_locator.bYI0OVI.App\Entity\ImagePost" class="App\Entity\ImagePost"/>
     <service id="console.command_loader" class="Symfony\Component\Console\CommandLoader\ContainerCommandLoader" public="true">
-      <argument type="service" id=".service_locator.Kpj493i"/>
+      <argument type="service" id=".service_locator.Ij6hfnd"/>
       <argument type="collection">
         <argument key="about">console.command.about</argument>
         <argument key="assets:install">console.command.assets_install</argument>
@@ -3576,6 +3810,9 @@
         <argument key="messenger:setup-transports">console.command.messenger_setup_transports</argument>
         <argument key="debug:messenger">console.command.messenger_debug</argument>
         <argument key="messenger:stop-workers">console.command.messenger_stop_workers</argument>
+        <argument key="messenger:failed:retry">console.command.messenger_failed_messages_retry</argument>
+        <argument key="messenger:failed:show">console.command.messenger_failed_messages_show</argument>
+        <argument key="messenger:failed:remove">console.command.messenger_failed_messages_remove</argument>
         <argument key="debug:router">console.command.router_debug</argument>
         <argument key="router:match">console.command.router_match</argument>
         <argument key="lint:yaml">console.command.yaml_lint</argument>
@@ -3622,7 +3859,7 @@
         <argument key="make:migration">maker.auto_command.make_migration</argument>
       </argument>
     </service>
-    <service id=".service_locator.Kpj493i" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
+    <service id=".service_locator.Ij6hfnd" class="Symfony\Component\DependencyInjection\ServiceLocator" public="false">
       <tag name="container.service_locator"/>
       <argument type="collection">
         <argument key="console.command.about" type="service" id="console.command.about"/>
@@ -3640,6 +3877,9 @@
         <argument key="console.command.event_dispatcher_debug" type="service" id="console.command.event_dispatcher_debug"/>
         <argument key="console.command.messenger_consume_messages" type="service" id="console.command.messenger_consume_messages"/>
         <argument key="console.command.messenger_debug" type="service" id="console.command.messenger_debug"/>
+        <argument key="console.command.messenger_failed_messages_remove" type="service" id="console.command.messenger_failed_messages_remove"/>
+        <argument key="console.command.messenger_failed_messages_retry" type="service" id="console.command.messenger_failed_messages_retry"/>
+        <argument key="console.command.messenger_failed_messages_show" type="service" id="console.command.messenger_failed_messages_show"/>
         <argument key="console.command.messenger_setup_transports" type="service" id="console.command.messenger_setup_transports"/>
         <argument key="console.command.messenger_stop_workers" type="service" id="console.command.messenger_stop_workers"/>
         <argument key="console.command.router_debug" type="service" id="console.command.router_debug"/>
@@ -3787,10 +4027,11 @@
     <service id="session.storage.filesystem" alias="session.storage.mock_file" public="false"/>
     <service id="session.storage" alias="session.storage.native"/>
     <service id="Symfony\Component\Asset\Packages" alias="assets.packages" public="false"/>
-    <service id="Symfony\Component\Messenger\Transport\Serialization\SerializerInterface" alias="messenger.default_serializer" public="false"/>
+    <service id="Symfony\Component\Messenger\Transport\Serialization\SerializerInterface" alias="messenger.transport.native_php_serializer" public="false"/>
     <service id="message_bus" alias="debug.traced.messenger.bus.default" public="true"/>
     <service id="messenger.default_bus" alias="debug.traced.messenger.bus.default" public="true"/>
     <service id="Symfony\Component\Messenger\MessageBusInterface" alias="debug.traced.messenger.bus.default"/>
+    <service id="messenger.default_serializer" alias="messenger.transport.native_php_serializer"/>
     <service id="Symfony\Component\Validator\Validator\ValidatorInterface" alias="debug.validator" public="false"/>
     <service id="validator.mapping.class_metadata_factory" alias="debug.validator" public="false"/>
     <service id="cache.default_redis_provider" alias=".cache_connection.GD_MSZC" public="false"/>
@@ -3843,10 +4084,11 @@
     <service id="Symfony\WebpackEncoreBundle\Asset\EntrypointLookupCollectionInterface" alias="webpack_encore.entrypoint_lookup_collection" public="false"/>
     <service id="Symfony\WebpackEncoreBundle\Asset\EntrypointLookupInterface" alias="webpack_encore.entrypoint_lookup[_default]"/>
     <service id="League\Flysystem\FilesystemInterface $photoFilesystem" alias="photo.filesystem" public="false"/>
-    <service id="argument_resolver.controller_locator" alias=".service_locator.d_uLFcX"/>
+    <service id="argument_resolver.controller_locator" alias=".service_locator.oXryCJz"/>
     <service id="twig.loader.filesystem" alias="twig.loader.native_filesystem" public="false"/>
     <service id="twig.loader" alias="twig.loader.native_filesystem"/>
-    <service id=".service_locator.YUq96kP" alias="messenger.retry_strategy_locator" public="false"/>
+    <service id=".service_locator.UWouFlY" alias="messenger.receiver_locator" public="false"/>
+    <service id=".service_locator.f5kIQsr" alias="messenger.retry_strategy_locator" public="false"/>
     <service id=".service_locator.tSKDlY7" alias=".1_ServiceLocator~nFPdPT2" public="false"/>
     <service id="validator" alias="debug.validator" public="true"/>
     <service id="event_dispatcher" alias="debug.event_dispatcher" public="true"/>

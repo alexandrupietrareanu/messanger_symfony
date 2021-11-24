@@ -1,4 +1,5 @@
 monolog:
+    channels: [messenger_audit]
     handlers:
         main:
             type: fingers_crossed
@@ -7,6 +8,11 @@ monolog:
             excluded_404s:
                 # regex: exclude all 404 errors from the logs
                 - ^/
+        messenger:
+            type: stream
+            path: "%kernel.logs_dir%/messenger.log"
+            level: debug
+            channels: [ "messenger_audit" ]
         nested:
             type: stream
             path: "%kernel.logs_dir%/%kernel.environment%.log"
