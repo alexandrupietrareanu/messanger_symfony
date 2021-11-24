@@ -16,6 +16,6 @@ if (!\class_exists(srcApp_KernelDevDebugContainer::class, false)) {
 
 return new \ContainerNiiTExT\srcApp_KernelDevDebugContainer([
     'container.build_hash' => 'NiiTExT',
-    'container.build_id' => '0dc834ab',
-    'container.build_time' => 1637747177,
+    'container.build_id' => 'c7c2e701',
+    'container.build_time' => 1637747554,
 ], __DIR__.\DIRECTORY_SEPARATOR.'ContainerNiiTExT');
